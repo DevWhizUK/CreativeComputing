@@ -6,9 +6,9 @@ import time
 pygame.init()
 
 # Screen dimensions
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-TILE_SIZE = 40
+SCREEN_WIDTH = 1200  # Increased width
+SCREEN_HEIGHT = 800  # Increased height
+TILE_SIZE = 20  # Reduced tile size
 
 # Colors
 WHITE = (255, 255, 255)
