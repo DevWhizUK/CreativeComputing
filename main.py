@@ -109,6 +109,11 @@ def draw_timer(surface, start_time):
     timer_text = font.render(f"Time: {elapsed_time:.2f} s", True, RED)
     surface.blit(timer_text, (SCREEN_WIDTH - 200, 10))
 
+# Draw the level counter
+def draw_level_counter(surface, level):
+    level_text = font.render(f"Level: {level}", True, RED)
+    surface.blit(level_text, (10, 10))
+
 # Draw the success message
 def draw_success_message(surface):
     message_text = message_font.render("Level Complete!", True, GREEN)
@@ -135,6 +140,7 @@ def spawn_bombs(maze, num_bombs):
 def main():
     clock = pygame.time.Clock()
     performance_metrics = []
+    level = 1
 
     def calculate_difficulty():
         if not performance_metrics:
@@ -184,6 +190,7 @@ def main():
             player.draw(screen)
             pygame.draw.rect(screen, GREEN, goal_rect)
             draw_timer(screen, start_time)
+            draw_level_counter(screen, level)
 
             # Handle bombs
             for bomb in bombs:
@@ -217,6 +224,7 @@ def main():
                 if time.time() - success_message_start_time > 2:
                     show_success_message = False
                     running = False
+                    level += 1
 
             pygame.display.flip()
             clock.tick(30)
