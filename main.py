@@ -37,12 +37,36 @@ bomb_images = {
 for key in bomb_images:
     bomb_images[key] = pygame.transform.scale(bomb_images[key], (TILE_SIZE, TILE_SIZE))
 
+# Load character sprites
+character_sprites = {
+    "still_right": pygame.image.load("img/character/still_right_facing.png"),
+    "still_left": pygame.image.load("img/character/still_left_facing.png"),
+    "still_forward": pygame.image.load("img/character/still_forwards_facing.png"),
+    "still_backward": pygame.image.load("img/character/still_backwards_facing.png"),
+    "moving_right_1": pygame.image.load("img/character/moving_right_step_one.png"),
+    "moving_right_2": pygame.image.load("img/character/moving_right_step_two.png"),
+    "moving_left_1": pygame.image.load("img/character/moving_left_step_one.png"),
+    "moving_left_2": pygame.image.load("img/character/moving_left_step_two.png"),
+    "moving_forward_1": pygame.image.load("img/character/moving_forwards_step_one.png"),
+    "moving_forward_2": pygame.image.load("img/character/moving_forwards_step_two.png"),
+    "moving_backward_1": pygame.image.load("img/character/moving_backward_step_one.png"),
+    "moving_backward_2": pygame.image.load("img/character/moving_backward_step_two.png")
+}
+
+# Scale character sprites to the tile size
+for key in character_sprites:
+    character_sprites[key] = pygame.transform.scale(character_sprites[key], (TILE_SIZE, TILE_SIZE))
+
 # Player class
 class Player:
     def __init__(self, x, y, maze):
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
-        self.color = BLUE
         self.maze = maze
+        self.direction = "still_forward"
+        self.moving = False
+        self.step = 1
+        self.last_move_time = time.time()
+        self.sprite = character_sprites[self.direction]
 
     def move(self, dx, dy):
         new_x = self.rect.x + dx
@@ -57,9 +81,32 @@ class Player:
             if self.maze[grid_y][grid_x] == 0:
                 self.rect.x = new_x
                 self.rect.y = new_y
+                self.moving = True
+                self.update_direction(dx, dy)
+                self.update_sprite()
+
+    def update_direction(self, dx, dy):
+        if dx > 0:
+            self.direction = "right"
+        elif dx < 0:
+            self.direction = "left"
+        elif dy > 0:
+            self.direction = "backward"
+        elif dy < 0:
+            self.direction = "forward"
+
+    def update_sprite(self):
+        current_time = time.time()
+        if self.moving and current_time - self.last_move_time > 0.1:  # Change sprite every 0.1 seconds
+            self.step = 1 if self.step == 2 else 2
+            self.sprite = character_sprites[f"moving_{self.direction}_{self.step}"]
+            self.last_move_time = current_time
+        elif not self.moving:
+            self.sprite = character_sprites[f"still_{self.direction}"]
 
     def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
+        surface.blit(self.sprite, self.rect)
+        self.moving = False
 
 # Bomb class
 class Bomb:
