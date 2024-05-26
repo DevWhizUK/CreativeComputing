@@ -15,6 +15,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+AMBER = (255, 191, 0)
 BLUE = (0, 0, 255)
 
 # Create screen
@@ -48,6 +49,26 @@ class Player:
 
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self.rect)
+
+# Bomb class
+class Bomb:
+    def __init__(self, x, y, color, timer):
+        self.rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        self.color = color
+        self.timer = timer
+        self.start_time = None
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.rect)
+
+    def start_countdown(self):
+        if self.start_time is None:
+            self.start_time = time.time()
+
+    def is_exploded(self):
+        if self.start_time and (time.time() - self.start_time >= self.timer):
+            return True
+        return False
 
 # Maze generation function
 def generate_maze(width, height, difficulty):
@@ -94,6 +115,22 @@ def draw_success_message(surface):
     text_rect = message_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
     surface.blit(message_text, text_rect)
 
+# Spawn bombs
+def spawn_bombs(maze, num_bombs):
+    bomb_types = [
+        (GREEN, 4.0),
+        (AMBER, 2.8),
+        (RED, 2.0)
+    ]
+    bombs = []
+    while len(bombs) < num_bombs:
+        x = random.randint(0, len(maze[0]) - 1)
+        y = random.randint(0, len(maze) - 1)
+        if maze[y][x] == 0:
+            color, timer = random.choice(bomb_types)
+            bombs.append(Bomb(x, y, color, timer))
+    return bombs
+
 # Main function
 def main():
     clock = pygame.time.Clock()
@@ -111,6 +148,9 @@ def main():
         maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
         player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze)
         goal_rect = pygame.Rect((SCREEN_WIDTH // TILE_SIZE - 1) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+        num_bombs = random.randint(2, 8)
+        bombs = spawn_bombs(maze, num_bombs)
 
         start_time = time.time()
         moves = 0
@@ -144,6 +184,22 @@ def main():
             player.draw(screen)
             pygame.draw.rect(screen, GREEN, goal_rect)
             draw_timer(screen, start_time)
+
+            # Handle bombs
+            for bomb in bombs:
+                if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
+                    bomb.start_countdown()
+                if bomb.is_exploded():
+                    bombs.remove(bomb)
+                    for dx in range(-1, 2):
+                        for dy in range(-1, 2):
+                            bx = bomb.rect.x // TILE_SIZE + dx
+                            by = bomb.rect.y // TILE_SIZE + dy
+                            if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
+                                maze[by][bx] = 0
+
+            for bomb in bombs:
+                bomb.draw(screen)
 
             if player.rect.colliderect(goal_rect):
                 if not show_success_message:
