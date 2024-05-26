@@ -23,14 +23,24 @@ pygame.display.set_caption("Maze Game")
 
 # Player class
 class Player:
-    def __init__(self, x, y):
+    def __init__(self, x, y, maze):
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         self.color = BLUE
+        self.maze = maze
 
     def move(self, dx, dy):
-        if self.rect.x + dx >= 0 and self.rect.x + dx < SCREEN_WIDTH and self.rect.y + dy >= 0 and self.rect.y + dy < SCREEN_HEIGHT:
-            self.rect.x += dx
-            self.rect.y += dy
+        new_x = self.rect.x + dx
+        new_y = self.rect.y + dy
+
+        # Calculate grid position
+        grid_x = new_x // TILE_SIZE
+        grid_y = new_y // TILE_SIZE
+
+        # Check if new position is within bounds and not a wall
+        if 0 <= grid_x < len(self.maze[0]) and 0 <= grid_y < len(self.maze):
+            if self.maze[grid_y][grid_x] == 0:
+                self.rect.x = new_x
+                self.rect.y = new_y
 
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self.rect)
@@ -81,9 +91,9 @@ def main():
         return min(max((avg_time + avg_moves) / 200, 0.1), 1.0)
 
     while True:
-        player = Player(TILE_SIZE // 2, TILE_SIZE // 2)
         difficulty = calculate_difficulty()
         maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
+        player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze)
         goal_rect = pygame.Rect((SCREEN_WIDTH // TILE_SIZE - 1) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
         start_time = time.time()
