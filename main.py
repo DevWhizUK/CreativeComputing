@@ -21,6 +21,9 @@ BLUE = (0, 0, 255)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Maze Game")
 
+# Font for timer
+font = pygame.font.Font(None, 36)
+
 # Player class
 class Player:
     def __init__(self, x, y, maze):
@@ -78,6 +81,12 @@ def draw_maze(surface, maze):
             if maze[y][x] == 1:
                 pygame.draw.rect(surface, BLACK, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
+# Draw the timer
+def draw_timer(surface, start_time):
+    elapsed_time = time.time() - start_time
+    timer_text = font.render(f"Time: {elapsed_time:.2f} s", True, RED)
+    surface.blit(timer_text, (SCREEN_WIDTH - 200, 10))
+
 # Main function
 def main():
     clock = pygame.time.Clock()
@@ -124,6 +133,7 @@ def main():
             draw_maze(screen, maze)
             player.draw(screen)
             pygame.draw.rect(screen, GREEN, goal_rect)
+            draw_timer(screen, start_time)
 
             if player.rect.colliderect(goal_rect):
                 end_time = time.time()
