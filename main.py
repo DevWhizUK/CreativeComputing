@@ -26,6 +26,17 @@ pygame.display.set_caption("Maze Game")
 font = pygame.font.Font(None, 36)
 message_font = pygame.font.Font(None, 72)
 
+# Load bomb images
+bomb_images = {
+    "green": pygame.image.load("img/bombs/bomb_green.png"),
+    "amber": pygame.image.load("img/bombs/bomb_amber.png"),
+    "red": pygame.image.load("img/bombs/bomb_red.png")
+}
+
+# Scale bomb images to the tile size
+for key in bomb_images:
+    bomb_images[key] = pygame.transform.scale(bomb_images[key], (TILE_SIZE, TILE_SIZE))
+
 # Player class
 class Player:
     def __init__(self, x, y, maze):
@@ -52,14 +63,15 @@ class Player:
 
 # Bomb class
 class Bomb:
-    def __init__(self, x, y, color, timer):
+    def __init__(self, x, y, color, timer, image):
         self.rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
         self.color = color
         self.timer = timer
+        self.image = image
         self.start_time = None
 
     def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
+        surface.blit(self.image, self.rect)
 
     def start_countdown(self):
         if self.start_time is None:
@@ -123,17 +135,17 @@ def draw_success_message(surface):
 # Spawn bombs
 def spawn_bombs(maze, num_bombs):
     bomb_types = [
-        (GREEN, 4.0),
-        (AMBER, 2.8),
-        (RED, 2.0)
+        ("green", 4.0, bomb_images["green"]),
+        ("amber", 2.8, bomb_images["amber"]),
+        ("red", 2.0, bomb_images["red"])
     ]
     bombs = []
     while len(bombs) < num_bombs:
         x = random.randint(0, len(maze[0]) - 1)
         y = random.randint(0, len(maze) - 1)
         if maze[y][x] == 0:
-            color, timer = random.choice(bomb_types)
-            bombs.append(Bomb(x, y, color, timer))
+            color, timer, image = random.choice(bomb_types)
+            bombs.append(Bomb(x, y, color, timer, image))
     return bombs
 
 # Main function
