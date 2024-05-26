@@ -21,8 +21,9 @@ BLUE = (0, 0, 255)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Maze Game")
 
-# Font for timer
+# Font for timer and messages
 font = pygame.font.Font(None, 36)
+message_font = pygame.font.Font(None, 72)
 
 # Player class
 class Player:
@@ -87,6 +88,12 @@ def draw_timer(surface, start_time):
     timer_text = font.render(f"Time: {elapsed_time:.2f} s", True, RED)
     surface.blit(timer_text, (SCREEN_WIDTH - 200, 10))
 
+# Draw the success message
+def draw_success_message(surface):
+    message_text = message_font.render("Level Complete!", True, GREEN)
+    text_rect = message_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+    surface.blit(message_text, text_rect)
+
 # Main function
 def main():
     clock = pygame.time.Clock()
@@ -109,6 +116,9 @@ def main():
         moves = 0
 
         running = True
+        show_success_message = False
+        success_message_start_time = None
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -136,13 +146,21 @@ def main():
             draw_timer(screen, start_time)
 
             if player.rect.colliderect(goal_rect):
-                end_time = time.time()
-                performance_metrics.append({
-                    'time': end_time - start_time,
-                    'moves': moves
-                })
-                print("You reached the goal!")
-                running = False
+                if not show_success_message:
+                    end_time = time.time()
+                    performance_metrics.append({
+                        'time': end_time - start_time,
+                        'moves': moves
+                    })
+                    print("You reached the goal!")
+                    show_success_message = True
+                    success_message_start_time = time.time()
+
+            if show_success_message:
+                draw_success_message(screen)
+                if time.time() - success_message_start_time > 2:
+                    show_success_message = False
+                    running = False
 
             pygame.display.flip()
             clock.tick(30)
