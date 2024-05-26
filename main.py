@@ -63,6 +63,12 @@ grass_image = pygame.image.load("img/backgrounds/grass.jpg")
 # Scale grass image to the tile size
 grass_image = pygame.transform.scale(grass_image, (TILE_SIZE, TILE_SIZE))
 
+# Load bush wall image
+bush_image = pygame.image.load("img/walls/bush.png")
+
+# Scale bush image to the tile size
+bush_image = pygame.transform.scale(bush_image, (TILE_SIZE, TILE_SIZE))
+
 # Player class
 class Player:
     def __init__(self, x, y, maze):
@@ -166,7 +172,7 @@ def draw_maze(surface, maze):
     for y in range(len(maze)):
         for x in range(len(maze[y])):
             if maze[y][x] == 1:
-                pygame.draw.rect(surface, BLACK, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                surface.blit(bush_image, (x * TILE_SIZE, y * TILE_SIZE))
 
 # Draw the background
 def draw_background(surface, image):
