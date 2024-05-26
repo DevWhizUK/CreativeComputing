@@ -57,6 +57,12 @@ character_sprites = {
 for key in character_sprites:
     character_sprites[key] = pygame.transform.scale(character_sprites[key], (TILE_SIZE, TILE_SIZE))
 
+# Load grass background
+grass_image = pygame.image.load("img/backgrounds/grass.jpg")
+
+# Scale grass image to the tile size
+grass_image = pygame.transform.scale(grass_image, (TILE_SIZE, TILE_SIZE))
+
 # Player class
 class Player:
     def __init__(self, x, y, maze):
@@ -162,6 +168,12 @@ def draw_maze(surface, maze):
             if maze[y][x] == 1:
                 pygame.draw.rect(surface, BLACK, pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
 
+# Draw the background
+def draw_background(surface, image):
+    for y in range(0, SCREEN_HEIGHT, TILE_SIZE):
+        for x in range(0, SCREEN_WIDTH, TILE_SIZE):
+            surface.blit(image, (x, y))
+
 # Draw the timer
 def draw_timer(surface, start_time):
     elapsed_time = time.time() - start_time
@@ -245,6 +257,7 @@ def main():
                 moves += 1
 
             screen.fill(WHITE)
+            draw_background(screen, grass_image)
             draw_maze(screen, maze)
             player.draw(screen)
             pygame.draw.rect(screen, GREEN, goal_rect)
