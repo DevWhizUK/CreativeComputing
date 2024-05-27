@@ -90,7 +90,7 @@ sprite_image = pygame.transform.scale(sprite_image, (int(sprite_image.get_width(
 
 # Player class
 class Player:
-    def __init__(self, x, y, maze, sprite_type="player"):
+    def __init__(self, x, y, maze, player_name, sprite_type="player"):
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         self.maze = maze
         self.direction = "still_forward"
@@ -100,6 +100,7 @@ class Player:
         self.sprite_type = sprite_type
         self.sprites = character_sprites
         self.sprite = self.sprites[self.direction]
+        self.player_name = player_name
 
     def move(self, dx, dy):
         new_x = self.rect.x + dx
@@ -140,6 +141,10 @@ class Player:
     def draw(self, surface):
         surface.blit(self.sprite, self.rect)
         self.moving = False
+        # Draw player name above the sprite
+        name_text = font.render(self.player_name, True, WHITE)
+        name_rect = name_text.get_rect(center=(self.rect.centerx, self.rect.y - 10))
+        surface.blit(name_text, name_rect)
 
 # Bomb class
 class Bomb:
@@ -331,7 +336,7 @@ def main():
     while True:
         difficulty = calculate_difficulty()
         maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
-        player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze)
+        player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze, player_name)
         goal_rect = pygame.Rect((SCREEN_WIDTH // TILE_SIZE - 1) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
         num_bombs = random.randint(2, 8)
