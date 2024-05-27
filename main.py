@@ -352,7 +352,7 @@ def draw_game_over_screen(surface, try_again_button):
 # Draw the finish screen
 def draw_finish_screen(surface, finish_button):
     surface.blit(finish_screen_image, (0, 0))
-    finish_text = finish_font.render("Congratulations, Trainer!", True, WHITE)
+    finish_text = finish_font.render("Congratulations, Trainer!", True, BLACK)
     finish_rect = finish_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
     surface.blit(finish_text, finish_rect)
 
@@ -366,7 +366,7 @@ def draw_finish_screen(surface, finish_button):
     ]
 
     for i, line in enumerate(text_lines):
-        line_text = font.render(line, True, WHITE)
+        line_text = font.render(line, True, BLACK)
         line_rect = line_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 60 + i * 30))
         surface.blit(line_text, line_rect)
 
