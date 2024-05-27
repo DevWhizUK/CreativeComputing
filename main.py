@@ -60,6 +60,16 @@ character_sprites = {
 for key in character_sprites:
     character_sprites[key] = pygame.transform.scale(character_sprites[key], (TILE_SIZE, TILE_SIZE))
 
+# Load Pikachu sprites
+pikachu_sprites = {
+    "back": pygame.image.load("img/character/pika_back.png"),
+    "side": pygame.image.load("img/character/pika_side.png")
+}
+
+# Scale Pikachu sprites to the tile size
+for key in pikachu_sprites:
+    pikachu_sprites[key] = pygame.transform.scale(pikachu_sprites[key], (TILE_SIZE, TILE_SIZE))
+
 # Load grass background
 grass_image = pygame.image.load("img/backgrounds/grass.jpg")
 
@@ -329,7 +339,8 @@ def main():
 
         # Initialize Pikachu near the exit
         pikachu_start_pos = ((SCREEN_WIDTH // TILE_SIZE - 2) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 2) * TILE_SIZE)
-        pikachu = Player(pikachu_start_pos[0], pikachu_start_pos[1], maze, sprite_type="pikachu")
+        pikachu_rect = pygame.Rect(pikachu_start_pos[0], pikachu_start_pos[1], TILE_SIZE, TILE_SIZE)
+        pikachu_sprite = pikachu_sprites["back"]
         pikachu_spawn_time = time.time()
 
         start_time = time.time()
@@ -368,8 +379,13 @@ def main():
             draw_level_counter(screen, level)
 
             # Handle Pikachu visibility
-            if time.time() - pikachu_spawn_time < 3:
-                pikachu.draw(screen)
+            elapsed_time = time.time() - pikachu_spawn_time
+            if elapsed_time < 1.5:
+                pikachu_sprite = pikachu_sprites["back"]
+            elif elapsed_time < 3:
+                pikachu_sprite = pikachu_sprites["side"]
+            if elapsed_time < 3:
+                screen.blit(pikachu_sprite, pikachu_rect)
 
             # Handle bombs
             for bomb in bombs:
