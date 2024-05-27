@@ -88,6 +88,10 @@ sprite_image = pygame.image.load("img/dialog_sprites/Oak.png")
 # Scale sprite image to fit the screen height
 sprite_image = pygame.transform.scale(sprite_image, (int(sprite_image.get_width() * SCREEN_HEIGHT / sprite_image.get_height()), SCREEN_HEIGHT))
 
+# Load heart images
+heart_image = pygame.image.load("img/hearts/100.png")
+heart_image = pygame.transform.scale(heart_image, (TILE_SIZE, TILE_SIZE))
+
 # Player class
 class Player:
     def __init__(self, x, y, maze, player_name, sprite_type="player"):
@@ -271,6 +275,14 @@ def draw_start_screen(surface, input_box, start_button, player_name):
     start_button_text = font.render("Start", True, BLACK)
     surface.blit(start_button_text, (start_button.x + 10, start_button.y + 10))
 
+# Draw hearts at the top center of the screen
+def draw_hearts(surface, num_hearts):
+    heart_spacing = TILE_SIZE + 5  # 5 pixels spacing between hearts
+    total_width = num_hearts * TILE_SIZE + (num_hearts - 1) * 5
+    start_x = (SCREEN_WIDTH - total_width) // 2
+    for i in range(num_hearts):
+        surface.blit(heart_image, (start_x + i * heart_spacing, 10))
+
 # Spawn bombs
 def spawn_bombs(maze, num_bombs):
     bomb_types = [
@@ -382,6 +394,7 @@ def main():
             pygame.draw.rect(screen, GREEN, goal_rect)
             draw_timer(screen, start_time)
             draw_level_counter(screen, level)
+            draw_hearts(screen, 3)  # Draw 3 heart images at the top center
 
             # Handle Pikachu visibility
             elapsed_time = time.time() - pikachu_spawn_time
