@@ -28,6 +28,7 @@ font_path = "img/fonts/PressStart2P.ttf"
 font = pygame.font.Font(font_path, 12)
 large_font = pygame.font.Font(font_path, 18)
 message_font = pygame.font.Font(font_path, 24)
+game_over_font = pygame.font.Font(font_path, 48)
 
 # Load bomb images
 bomb_images = {
@@ -89,8 +90,15 @@ sprite_image = pygame.image.load("img/dialog_sprites/Oak.png")
 sprite_image = pygame.transform.scale(sprite_image, (int(sprite_image.get_width() * SCREEN_HEIGHT / sprite_image.get_height()), SCREEN_HEIGHT))
 
 # Load heart images
-heart_image = pygame.image.load("img/hearts/100.png")
-heart_image = pygame.transform.scale(heart_image, (TILE_SIZE, TILE_SIZE))
+heart_images = {
+    100: pygame.image.load("img/hearts/100.png"),
+    50: pygame.image.load("img/hearts/50.png"),
+    0: pygame.image.load("img/hearts/0.png")
+}
+
+# Scale heart images to the tile size
+for key in heart_images:
+    heart_images[key] = pygame.transform.scale(heart_images[key], (TILE_SIZE, TILE_SIZE))
 
 # Player class
 class Player:
@@ -105,6 +113,7 @@ class Player:
         self.sprites = character_sprites
         self.sprite = self.sprites[self.direction]
         self.player_name = player_name
+        self.lives = 6  # Initialize with 6 lives
 
     def move(self, dx, dy):
         new_x = self.rect.x + dx
@@ -122,6 +131,31 @@ class Player:
                 self.moving = True
                 self.update_direction(dx, dy)
                 self.update_sprite()
+
+    def knockback(self, bomb):
+        dx = self.rect.x - bomb.rect.x
+        dy = self.rect.y - bomb.rect.y
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+        if distance == 0:
+            return
+
+        knockback_distance = TILE_SIZE * 2  # The distance of the knockback effect
+        self.rect.x += int(knockback_distance * dx / distance)
+        self.rect.y += int(knockback_distance * dy / distance)
+
+        # Ensure the player does not go through walls
+        grid_x = self.rect.x // TILE_SIZE
+        grid_y = self.rect.y // TILE_SIZE
+        if grid_x < 0 or grid_x >= len(self.maze[0]) or grid_y < 0 or grid_y >= len(self.maze) or self.maze[grid_y][grid_x] == 1:
+            self.rect.x -= int(knockback_distance * dx / distance)
+            self.rect.y -= int(knockback_distance * dy / distance)
+
+        self.lose_life()  # Player loses a life when knocked back
+
+    def lose_life(self):
+        self.lives -= 1
+        if self.lives < 0:
+            self.lives = 0
 
     def update_direction(self, dx, dy):
         if dx > 0:
@@ -170,6 +204,11 @@ class Bomb:
         if self.start_time and (time.time() - self.start_time >= self.timer):
             return True
         return False
+
+    def explode(self, player):
+        explosion_radius = 2 * TILE_SIZE
+        if player.rect.colliderect(self.rect.inflate(explosion_radius, explosion_radius)):
+            player.knockback(self)
 
 # Maze generation function
 def generate_maze(width, height, difficulty):
@@ -276,12 +315,30 @@ def draw_start_screen(surface, input_box, start_button, player_name):
     surface.blit(start_button_text, (start_button.x + 10, start_button.y + 10))
 
 # Draw hearts at the top center of the screen
-def draw_hearts(surface, num_hearts):
+def draw_hearts(surface, lives):
     heart_spacing = TILE_SIZE + 5  # 5 pixels spacing between hearts
-    total_width = num_hearts * TILE_SIZE + (num_hearts - 1) * 5
+    total_width = 3 * TILE_SIZE + (3 - 1) * 5
     start_x = (SCREEN_WIDTH - total_width) // 2
-    for i in range(num_hearts):
+    for i in range(3):
+        if lives >= (i + 1) * 2:
+            heart_image = heart_images[100]
+        elif lives == (i * 2) + 1:
+            heart_image = heart_images[50]
+        else:
+            heart_image = heart_images[0]
         surface.blit(heart_image, (start_x + i * heart_spacing, 10))
+
+# Draw the game over screen
+def draw_game_over_screen(surface, try_again_button):
+    surface.fill(BLACK)
+    game_over_text = game_over_font.render("GAME OVER", True, RED)
+    game_over_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+    surface.blit(game_over_text, game_over_rect)
+
+    pygame.draw.rect(surface, GRAY, try_again_button)
+    try_again_text = font.render("Try Again", True, BLACK)
+    try_again_rect = try_again_text.get_rect(center=try_again_button.center)
+    surface.blit(try_again_text, try_again_rect)
 
 # Spawn bombs
 def spawn_bombs(maze, num_bombs):
@@ -303,7 +360,6 @@ def spawn_bombs(maze, num_bombs):
 def main():
     clock = pygame.time.Clock()
     performance_metrics = []
-    level = 1
     player_name = ""
 
     def calculate_difficulty():
@@ -345,6 +401,12 @@ def main():
         pygame.display.flip()
         clock.tick(30)
 
+    def reset_game():
+        nonlocal level, performance_metrics
+        level = 1
+        performance_metrics = []
+
+    level = 1
     while True:
         difficulty = calculate_difficulty()
         maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
@@ -366,78 +428,93 @@ def main():
         running = True
         show_success_message = False
         success_message_start_time = None
+        game_over = False
+
+        try_again_button = pygame.Rect(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 20, 100, 40)
 
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     return
+                if event.type == pygame.MOUSEBUTTONDOWN and game_over:
+                    if try_again_button.collidepoint(event.pos):
+                        reset_game()
+                        running = False
 
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_a]:
-                player.move(-TILE_SIZE, 0)
-                moves += 1
-            if keys[pygame.K_d]:
-                player.move(TILE_SIZE, 0)
-                moves += 1
-            if keys[pygame.K_w]:
-                player.move(0, -TILE_SIZE)
-                moves += 1
-            if keys[pygame.K_s]:
-                player.move(0, TILE_SIZE)
-                moves += 1
+            if not game_over:
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_a]:
+                    player.move(-TILE_SIZE, 0)
+                    moves += 1
+                if keys[pygame.K_d]:
+                    player.move(TILE_SIZE, 0)
+                    moves += 1
+                if keys[pygame.K_w]:
+                    player.move(0, -TILE_SIZE)
+                    moves += 1
+                if keys[pygame.K_s]:
+                    player.move(0, TILE_SIZE)
+                    moves += 1
 
-            screen.fill(WHITE)
-            draw_background(screen, grass_image)
-            draw_maze(screen, maze)
-            player.draw(screen)
-            pygame.draw.rect(screen, GREEN, goal_rect)
-            draw_timer(screen, start_time)
-            draw_level_counter(screen, level)
-            draw_hearts(screen, 3)  # Draw 3 heart images at the top center
+                screen.fill(WHITE)
+                draw_background(screen, grass_image)
+                draw_maze(screen, maze)
+                player.draw(screen)
+                pygame.draw.rect(screen, GREEN, goal_rect)
+                draw_timer(screen, start_time)
+                draw_level_counter(screen, level)
+                draw_hearts(screen, player.lives)  # Draw heart images based on lives
 
-            # Handle Pikachu visibility
-            elapsed_time = time.time() - pikachu_spawn_time
-            if elapsed_time < 1.5:
-                pikachu_sprite = pikachu_sprites["back"]
-            elif elapsed_time < 3:
-                pikachu_sprite = pikachu_sprites["side"]
-            if elapsed_time < 3:
-                screen.blit(pikachu_sprite, pikachu_rect)
+                # Handle Pikachu visibility
+                elapsed_time = time.time() - pikachu_spawn_time
+                if elapsed_time < 1.5:
+                    pikachu_sprite = pikachu_sprites["back"]
+                elif elapsed_time < 3:
+                    pikachu_sprite = pikachu_sprites["side"]
+                if elapsed_time < 3:
+                    screen.blit(pikachu_sprite, pikachu_rect)
 
-            # Handle bombs
-            for bomb in bombs:
-                if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
-                    bomb.start_countdown()
-                if bomb.is_exploded():
-                    bombs.remove(bomb)
-                    for dx in range(-2, 3):  # Increase radius to 2 tiles
-                        for dy in range(-2, 3):
-                            bx = bomb.rect.x // TILE_SIZE + dx
-                            by = bomb.rect.y // TILE_SIZE + dy
-                            if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
-                                maze[by][bx] = 0
+                # Handle bombs
+                for bomb in bombs:
+                    if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
+                        bomb.start_countdown()
+                    if bomb.is_exploded():
+                        bombs.remove(bomb)
+                        bomb.explode(player)
+                        for dx in range(-2, 3):  # Increase radius to 2 tiles
+                            for dy in range(-2, 3):
+                                bx = bomb.rect.x // TILE_SIZE + dx
+                                by = bomb.rect.y // TILE_SIZE + dy
+                                if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
+                                    maze[by][bx] = 0
 
-            for bomb in bombs:
-                bomb.draw(screen)
+                for bomb in bombs:
+                    bomb.draw(screen)
 
-            if player.rect.colliderect(goal_rect):
-                if not show_success_message:
-                    end_time = time.time()
-                    performance_metrics.append({
-                        'time': end_time - start_time,
-                        'moves': moves
-                    })
-                    print("You reached the goal!")
-                    show_success_message = True
-                    success_message_start_time = time.time()
+                if player.lives == 0:
+                    game_over = True
 
-            if show_success_message:
-                draw_success_message(screen)
-                if time.time() - success_message_start_time > 2:
-                    show_success_message = False
-                    running = False
-                    level += 1
+                if player.rect.colliderect(goal_rect):
+                    if not show_success_message:
+                        end_time = time.time()
+                        performance_metrics.append({
+                            'time': end_time - start_time,
+                            'moves': moves
+                        })
+                        print("You reached the goal!")
+                        show_success_message = True
+                        success_message_start_time = time.time()
+
+                if show_success_message:
+                    draw_success_message(screen)
+                    if time.time() - success_message_start_time > 2:
+                        show_success_message = False
+                        running = False
+                        level += 1
+
+            else:
+                draw_game_over_screen(screen, try_again_button)
 
             pygame.display.flip()
             clock.tick(30)
