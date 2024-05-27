@@ -80,14 +80,16 @@ sprite_image = pygame.transform.scale(sprite_image, (int(sprite_image.get_width(
 
 # Player class
 class Player:
-    def __init__(self, x, y, maze):
+    def __init__(self, x, y, maze, sprite_type="player"):
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         self.maze = maze
         self.direction = "still_forward"
         self.moving = False
         self.step = 1
         self.last_move_time = time.time()
-        self.sprite = character_sprites[self.direction]
+        self.sprite_type = sprite_type
+        self.sprites = character_sprites
+        self.sprite = self.sprites[self.direction]
 
     def move(self, dx, dy):
         new_x = self.rect.x + dx
@@ -120,10 +122,10 @@ class Player:
         current_time = time.time()
         if self.moving and current_time - self.last_move_time > 0.1:  # Change sprite every 0.1 seconds
             self.step = 1 if self.step == 2 else 2
-            self.sprite = character_sprites[f"moving_{self.direction}_{self.step}"]
+            self.sprite = self.sprites[f"moving_{self.direction}_{self.step}"]
             self.last_move_time = current_time
         elif not self.moving:
-            self.sprite = character_sprites[f"still_{self.direction}"]
+            self.sprite = self.sprites[f"still_{self.direction}"]
 
     def draw(self, surface):
         surface.blit(self.sprite, self.rect)
@@ -325,6 +327,11 @@ def main():
         num_bombs = random.randint(2, 8)
         bombs = spawn_bombs(maze, num_bombs)
 
+        # Initialize Pikachu near the exit
+        pikachu_start_pos = ((SCREEN_WIDTH // TILE_SIZE - 2) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 2) * TILE_SIZE)
+        pikachu = Player(pikachu_start_pos[0], pikachu_start_pos[1], maze, sprite_type="pikachu")
+        pikachu_spawn_time = time.time()
+
         start_time = time.time()
         moves = 0
 
@@ -360,14 +367,18 @@ def main():
             draw_timer(screen, start_time)
             draw_level_counter(screen, level)
 
+            # Handle Pikachu visibility
+            if time.time() - pikachu_spawn_time < 3:
+                pikachu.draw(screen)
+
             # Handle bombs
             for bomb in bombs:
                 if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
                     bomb.start_countdown()
                 if bomb.is_exploded():
                     bombs.remove(bomb)
-                    for dx in range(-1, 2):
-                        for dy in range(-1, 2):
+                    for dx in range(-2, 3):  # Increase radius to 2 tiles
+                        for dy in range(-2, 3):
                             bx = bomb.rect.x // TILE_SIZE + dx
                             by = bomb.rect.y // TILE_SIZE + dy
                             if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
