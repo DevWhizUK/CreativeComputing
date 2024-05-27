@@ -2,8 +2,9 @@ import pygame
 import random
 import time
 
-# Initialize Pygame
+# Initialize Pygame and the mixer for playing audio
 pygame.init()
+pygame.mixer.init()
 
 # Screen dimensions
 SCREEN_WIDTH = 1200  # Increased width
@@ -29,6 +30,7 @@ font = pygame.font.Font(font_path, 12)
 large_font = pygame.font.Font(font_path, 18)
 message_font = pygame.font.Font(font_path, 24)
 game_over_font = pygame.font.Font(font_path, 48)
+finish_font = pygame.font.Font(font_path, 32)
 
 # Load bomb images
 bomb_images = {
@@ -100,9 +102,16 @@ heart_images = {
 for key in heart_images:
     heart_images[key] = pygame.transform.scale(heart_images[key], (TILE_SIZE, TILE_SIZE))
 
+# Load finish screen image
+finish_screen_image = pygame.image.load("img/finish_screen/finnish.jpg")
+finish_screen_image = pygame.transform.scale(finish_screen_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
+# Load ending theme
+pygame.mixer.music.load("music/theme_ending.mp3")
+
 # Player class
 class Player:
-    def __init__(self, x, y, maze, player_name, sprite_type="player"):
+    def __init__(self, x, y, maze, player_name, lives=6, sprite_type="player"):
         self.rect = pygame.Rect(x, y, TILE_SIZE, TILE_SIZE)
         self.maze = maze
         self.direction = "still_forward"
@@ -113,7 +122,7 @@ class Player:
         self.sprites = character_sprites
         self.sprite = self.sprites[self.direction]
         self.player_name = player_name
-        self.lives = 6  # Initialize with 6 lives
+        self.lives = lives  # Initialize with given lives
 
     def move(self, dx, dy):
         new_x = self.rect.x + dx
@@ -340,6 +349,32 @@ def draw_game_over_screen(surface, try_again_button):
     try_again_rect = try_again_text.get_rect(center=try_again_button.center)
     surface.blit(try_again_text, try_again_rect)
 
+# Draw the finish screen
+def draw_finish_screen(surface, finish_button):
+    surface.blit(finish_screen_image, (0, 0))
+    finish_text = finish_font.render("Congratulations, Trainer!", True, WHITE)
+    finish_rect = finish_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 120))
+    surface.blit(finish_text, finish_rect)
+
+    text_lines = [
+        "You have successfully navigated all the mazes and found Pikachu!",
+        "Pikachu jumps into your arms, happy to be reunited with you.",
+        "Your bond with Pikachu has grown even stronger.",
+        "Together, you are ready to face any challenge that comes your way.",
+        "Thank you for playing!",
+        "[Press Finish to End Game]"
+    ]
+
+    for i, line in enumerate(text_lines):
+        line_text = font.render(line, True, WHITE)
+        line_rect = line_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 60 + i * 30))
+        surface.blit(line_text, line_rect)
+
+    pygame.draw.rect(surface, GRAY, finish_button)
+    finish_button_text = font.render("Finish", True, BLACK)
+    finish_button_rect = finish_button_text.get_rect(center=finish_button.center)
+    surface.blit(finish_button_text, finish_button_rect)
+
 # Spawn bombs
 def spawn_bombs(maze, num_bombs):
     bomb_types = [
@@ -402,122 +437,146 @@ def main():
         clock.tick(30)
 
     def reset_game():
-        nonlocal level, performance_metrics
+        nonlocal level, performance_metrics, player_lives
         level = 1
         performance_metrics = []
+        player_lives = 6  # Reset player lives
 
+    player_lives = 6
     level = 1
+    game_over = False
+    finish_game = False
+    try_again_button = pygame.Rect(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 20, 100, 40)
+    finish_button = pygame.Rect(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 100, 100, 40)
+
     while True:
-        difficulty = calculate_difficulty()
-        maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
-        player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze, player_name)
-        goal_rect = pygame.Rect((SCREEN_WIDTH // TILE_SIZE - 1) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-
-        num_bombs = random.randint(2, 8)
-        bombs = spawn_bombs(maze, num_bombs)
-
-        # Initialize Pikachu near the exit
-        pikachu_start_pos = ((SCREEN_WIDTH // TILE_SIZE - 2) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 2) * TILE_SIZE)
-        pikachu_rect = pygame.Rect(pikachu_start_pos[0], pikachu_start_pos[1], TILE_SIZE, TILE_SIZE)
-        pikachu_sprite = pikachu_sprites["back"]
-        pikachu_spawn_time = time.time()
-
-        start_time = time.time()
-        moves = 0
-
-        running = True
-        show_success_message = False
-        success_message_start_time = None
-        game_over = False
-
-        try_again_button = pygame.Rect(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2 + 20, 100, 40)
-
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return
-                if event.type == pygame.MOUSEBUTTONDOWN and game_over:
-                    if try_again_button.collidepoint(event.pos):
-                        reset_game()
-                        running = False
-
-            if not game_over:
-                keys = pygame.key.get_pressed()
-                if keys[pygame.K_a]:
-                    player.move(-TILE_SIZE, 0)
-                    moves += 1
-                if keys[pygame.K_d]:
-                    player.move(TILE_SIZE, 0)
-                    moves += 1
-                if keys[pygame.K_w]:
-                    player.move(0, -TILE_SIZE)
-                    moves += 1
-                if keys[pygame.K_s]:
-                    player.move(0, TILE_SIZE)
-                    moves += 1
-
-                screen.fill(WHITE)
-                draw_background(screen, grass_image)
-                draw_maze(screen, maze)
-                player.draw(screen)
-                pygame.draw.rect(screen, GREEN, goal_rect)
-                draw_timer(screen, start_time)
-                draw_level_counter(screen, level)
-                draw_hearts(screen, player.lives)  # Draw heart images based on lives
-
-                # Handle Pikachu visibility
-                elapsed_time = time.time() - pikachu_spawn_time
-                if elapsed_time < 1.5:
-                    pikachu_sprite = pikachu_sprites["back"]
-                elif elapsed_time < 3:
-                    pikachu_sprite = pikachu_sprites["side"]
-                if elapsed_time < 3:
-                    screen.blit(pikachu_sprite, pikachu_rect)
-
-                # Handle bombs
-                for bomb in bombs:
-                    if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
-                        bomb.start_countdown()
-                    if bomb.is_exploded():
-                        bombs.remove(bomb)
-                        bomb.explode(player)
-                        for dx in range(-2, 3):  # Increase radius to 2 tiles
-                            for dy in range(-2, 3):
-                                bx = bomb.rect.x // TILE_SIZE + dx
-                                by = bomb.rect.y // TILE_SIZE + dy
-                                if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
-                                    maze[by][bx] = 0
-
-                for bomb in bombs:
-                    bomb.draw(screen)
-
-                if player.lives == 0:
-                    game_over = True
-
-                if player.rect.colliderect(goal_rect):
-                    if not show_success_message:
-                        end_time = time.time()
-                        performance_metrics.append({
-                            'time': end_time - start_time,
-                            'moves': moves
-                        })
-                        print("You reached the goal!")
-                        show_success_message = True
-                        success_message_start_time = time.time()
-
-                if show_success_message:
-                    draw_success_message(screen)
-                    if time.time() - success_message_start_time > 2:
-                        show_success_message = False
-                        running = False
-                        level += 1
-
-            else:
-                draw_game_over_screen(screen, try_again_button)
-
+        if finish_game:
+            draw_finish_screen(screen, finish_button)
+            pygame.mixer.music.play(-1)
+            pygame.mixer.music.set_volume(0.3)
             pygame.display.flip()
-            clock.tick(30)
+            running = True
+            while running:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        return
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if finish_button.collidepoint(event.pos):
+                            pygame.quit()
+                            return
+        else:
+            difficulty = calculate_difficulty()
+            maze = generate_maze(SCREEN_WIDTH // TILE_SIZE, SCREEN_HEIGHT // TILE_SIZE, difficulty)
+            player = Player(TILE_SIZE // 2, TILE_SIZE // 2, maze, player_name, lives=player_lives)
+            goal_rect = pygame.Rect((SCREEN_WIDTH // TILE_SIZE - 1) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 1) * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+
+            num_bombs = random.randint(2, 8)
+            bombs = spawn_bombs(maze, num_bombs)
+
+            # Initialize Pikachu near the exit
+            pikachu_start_pos = ((SCREEN_WIDTH // TILE_SIZE - 2) * TILE_SIZE, (SCREEN_HEIGHT // TILE_SIZE - 2) * TILE_SIZE)
+            pikachu_rect = pygame.Rect(pikachu_start_pos[0], pikachu_start_pos[1], TILE_SIZE, TILE_SIZE)
+            pikachu_sprite = pikachu_sprites["back"]
+            pikachu_spawn_time = time.time()
+
+            start_time = time.time()
+            moves = 0
+
+            running = True
+            show_success_message = False
+            success_message_start_time = None
+
+            while running:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        return
+                    if event.type == pygame.MOUSEBUTTONDOWN and game_over:
+                        if try_again_button.collidepoint(event.pos):
+                            reset_game()
+                            running = False
+
+                if not game_over:
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_a]:
+                        player.move(-TILE_SIZE, 0)
+                        moves += 1
+                    if keys[pygame.K_d]:
+                        player.move(TILE_SIZE, 0)
+                        moves += 1
+                    if keys[pygame.K_w]:
+                        player.move(0, -TILE_SIZE)
+                        moves += 1
+                    if keys[pygame.K_s]:
+                        player.move(0, TILE_SIZE)
+                        moves += 1
+
+                    screen.fill(WHITE)
+                    draw_background(screen, grass_image)
+                    draw_maze(screen, maze)
+                    player.draw(screen)
+                    pygame.draw.rect(screen, GREEN, goal_rect)
+                    draw_timer(screen, start_time)
+                    draw_level_counter(screen, level)
+                    draw_hearts(screen, player.lives)  # Draw heart images based on lives
+
+                    # Handle Pikachu visibility
+                    elapsed_time = time.time() - pikachu_spawn_time
+                    if elapsed_time < 1.5:
+                        pikachu_sprite = pikachu_sprites["back"]
+                    elif elapsed_time < 3:
+                        pikachu_sprite = pikachu_sprites["side"]
+                    if elapsed_time < 3:
+                        screen.blit(pikachu_sprite, pikachu_rect)
+
+                    # Handle bombs
+                    for bomb in bombs:
+                        if player.rect.colliderect(bomb.rect.inflate(2 * TILE_SIZE, 2 * TILE_SIZE)):
+                            bomb.start_countdown()
+                        if bomb.is_exploded():
+                            bombs.remove(bomb)
+                            bomb.explode(player)
+                            for dx in range(-2, 3):  # Increase radius to 2 tiles
+                                for dy in range(-2, 3):
+                                    bx = bomb.rect.x // TILE_SIZE + dx
+                                    by = bomb.rect.y // TILE_SIZE + dy
+                                    if 0 <= bx < len(maze[0]) and 0 <= by < len(maze):
+                                        maze[by][bx] = 0
+
+                    for bomb in bombs:
+                        bomb.draw(screen)
+
+                    if player.lives == 0:
+                        game_over = True
+
+                    if player.rect.colliderect(goal_rect):
+                        if not show_success_message:
+                            end_time = time.time()
+                            performance_metrics.append({
+                                'time': end_time - start_time,
+                                'moves': moves
+                            })
+                            print("You reached the goal!")
+                            show_success_message = True
+                            success_message_start_time = time.time()
+                            player_lives = player.lives  # Carry over remaining lives to the next level
+
+                    if show_success_message:
+                        draw_success_message(screen)
+                        if time.time() - success_message_start_time > 2:
+                            show_success_message = False
+                            running = False
+                            if level == 10:
+                                finish_game = True
+                            else:
+                                level += 1
+
+                else:
+                    draw_game_over_screen(screen, try_again_button)
+
+                pygame.display.flip()
+                clock.tick(30)
 
 if __name__ == "__main__":
     main()
