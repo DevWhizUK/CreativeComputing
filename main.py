@@ -23,10 +23,11 @@ GRAY = (169, 169, 169)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Maze Game")
 
-# Font for timer and messages
-font = pygame.font.Font(None, 36)
-large_font = pygame.font.Font(None, 48)
-message_font = pygame.font.Font(None, 72)
+# Load custom font
+font_path = "img/fonts/PressStart2P.ttf"
+font = pygame.font.Font(font_path, 12)
+large_font = pygame.font.Font(font_path, 18)
+message_font = pygame.font.Font(font_path, 24)
 
 # Load bomb images
 bomb_images = {
@@ -70,6 +71,12 @@ bush_image = pygame.image.load("img/walls/bush.png")
 
 # Scale bush image to the tile size
 bush_image = pygame.transform.scale(bush_image, (TILE_SIZE, TILE_SIZE))
+
+# Load sprite image
+sprite_image = pygame.image.load("img/dialog_sprites/Oak.png")
+
+# Scale sprite image to fit the screen height
+sprite_image = pygame.transform.scale(sprite_image, (int(sprite_image.get_width() * SCREEN_HEIGHT / sprite_image.get_height()), SCREEN_HEIGHT))
 
 # Player class
 class Player:
@@ -201,27 +208,45 @@ def draw_success_message(surface):
 
 # Draw the start screen
 def draw_start_screen(surface, input_box, start_button, player_name):
-    surface.fill(WHITE)
-    title_text = large_font.render("Welcome to the world of Pokémon!", True, BLACK)
-    story_text = font.render("You are a budding Pokémon trainer, ready to embark on an exciting adventure.", True, BLACK)
-    story_text2 = font.render("But wait! Pikachu, your trusty partner, has gone missing in a maze-filled forest.", True, BLACK)
-    story_text3 = font.render("It's up to you to navigate the mazes and find Pikachu before it's too late.", True, BLACK)
-    story_text4 = font.render("Are you ready to begin your journey?", True, BLACK)
-    start_text = font.render("[Press Start to Begin]", True, BLACK)
-    name_prompt = font.render("Enter your name:", True, BLACK)
+    surface.fill(BLACK)
 
-    surface.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 50))
-    surface.blit(story_text, (SCREEN_WIDTH // 2 - story_text.get_width() // 2, 150))
-    surface.blit(story_text2, (SCREEN_WIDTH // 2 - story_text2.get_width() // 2, 200))
-    surface.blit(story_text3, (SCREEN_WIDTH // 2 - story_text3.get_width() // 2, 250))
-    surface.blit(story_text4, (SCREEN_WIDTH // 2 - story_text4.get_width() // 2, 300))
-    surface.blit(name_prompt, (SCREEN_WIDTH // 2 - name_prompt.get_width() // 2, 350))
-    surface.blit(start_text, (SCREEN_WIDTH // 2 - start_text.get_width() // 2, 500))
+    # Draw the sprite image on the right side
+    sprite_x = SCREEN_WIDTH - sprite_image.get_width() - 50
+    surface.blit(sprite_image, (sprite_x, 0))
+
+    title_text = large_font.render("Welcome to the world of Pokémon!", True, WHITE)
+    story_text = font.render("You are a budding Pokémon trainer,", True, WHITE)
+    story_text2 = font.render("ready to embark on an exciting adventure.", True, WHITE)
+    story_text3 = font.render("But wait! Pikachu, your trusty partner,", True, WHITE)
+    story_text4 = font.render("has gone missing in a maze-filled forest.", True, WHITE)
+    story_text5 = font.render("It's up to you to navigate the mazes and", True, WHITE)
+    story_text6 = font.render("find Pikachu before it's too late.", True, WHITE)
+    story_text7 = font.render("Are you ready to begin your journey?", True, WHITE)
+    start_text = font.render("[Press Start to Begin]", True, WHITE)
+    name_prompt = font.render("Enter your name:", True, WHITE)
+
+    # Positioning for the text
+    text_x = 50
+    title_y = 50
+    story_y = 150
+    prompt_y = 500
+    start_y = 600
+
+    surface.blit(title_text, (text_x, title_y))
+    surface.blit(story_text, (text_x, story_y))
+    surface.blit(story_text2, (text_x, story_y + 30))
+    surface.blit(story_text3, (text_x, story_y + 60))
+    surface.blit(story_text4, (text_x, story_y + 90))
+    surface.blit(story_text5, (text_x, story_y + 120))
+    surface.blit(story_text6, (text_x, story_y + 150))
+    surface.blit(story_text7, (text_x, story_y + 180))
+    surface.blit(name_prompt, (text_x, prompt_y))
+    surface.blit(start_text, (text_x, start_y))
 
     # Draw the input box
-    input_text = font.render(player_name, True, BLACK)
-    pygame.draw.rect(surface, WHITE, input_box)
-    pygame.draw.rect(surface, BLACK, input_box, 2)
+    input_text = font.render(player_name, True, WHITE)
+    pygame.draw.rect(surface, BLACK, input_box)
+    pygame.draw.rect(surface, WHITE, input_box, 2)
     surface.blit(input_text, (input_box.x + 5, input_box.y + 5))
 
     # Draw the start button
@@ -260,8 +285,8 @@ def main():
         return min(max((avg_time + avg_moves) / 200, 0.1), 1.0)
 
     # Input box for player name
-    input_box = pygame.Rect(SCREEN_WIDTH // 2 - 100, 400, 200, 40)
-    start_button = pygame.Rect(SCREEN_WIDTH // 2 - 50, 550, 100, 40)
+    input_box = pygame.Rect(50, 540, 200, 40)
+    start_button = pygame.Rect(50, 650, 100, 40)
     active = False
 
     # Start screen loop
